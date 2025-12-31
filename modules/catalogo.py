@@ -7,7 +7,7 @@ def generar_link_whatsapp(producto, precio, color):
     """Genera un link de WhatsApp con un mensaje predefinido."""
     # ⚠️ REEMPLAZA CON TU NÚMERO (Ejemplo para Bolivia: 59170000000)
     # Sin el signo +, solo números.
-    telefono = "591XXXXXXXX" 
+    telefono = "59178790265" 
     
     mensaje = (
         f"¡Hola! 👋 Vi tu catálogo web y me interesa este producto:\n\n"
