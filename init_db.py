@@ -88,6 +88,25 @@ def inicializar_todo():
     INSERT OR IGNORE INTO usuarios (id_usuario, nombre, rol, usuario, contrasena, salario, telefono) 
     VALUES (1, 'Israel Administrador', 'Jefe', 'admin', '1234', 0, '70000000')
     """)
+    
+    # 7. Tabla de Productos Terminados (Para el Catálogo de Clientes)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS productos (
+        id_producto INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        descripcion TEXT,
+        precio_venta REAL NOT NULL,
+        color TEXT,
+        stock INTEGER DEFAULT 0,
+        categoria TEXT DEFAULT 'Medias'
+    )
+    """)
+
+    # Insertar producto de ejemplo para que el catálogo no esté vacío al iniciar
+    cursor.execute("""
+    INSERT OR IGNORE INTO productos (nombre, descripcion, precio_venta, color, stock) 
+    VALUES ('Media Deportiva Pro', 'Algodón reforzado para deporte', 15.0, 'Negro', 24)
+    """)
 
     conn.commit()
     conn.close()
