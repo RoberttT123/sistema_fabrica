@@ -1,5 +1,6 @@
 import time
 import streamlit as st
+import os
 from modules.database import ejecutar_consulta, obtener_datos
 from datetime import datetime
 import time
@@ -120,7 +121,6 @@ def gestionar_usuarios():
         st.dataframe(df_cli, use_container_width=True)
 
     # --- 3. PESTAÑA DE ASISTENCIA ---
-    # --- 3. PESTAÑA DE ASISTENCIA ---
     with tab_asistencia:
         st.subheader("🕒 Control de Asistencia por Turnos")
         
@@ -166,6 +166,8 @@ def gestionar_usuarios():
                 from fpdf import FPDF
                 pdf = FPDF(orientation='L')
                 pdf.add_page()
+                if os.path.exists("logo.png"):
+                    pdf.image("logo.png", x=10, y=8, w=25) # Ajusta x, y, w según prefieras
                 pdf.set_font("Arial", 'B', 16)
                 pdf.cell(0, 10, txt=f"REPORTE DE ASISTENCIA - {turno_ver.upper()}", ln=True, align='C')
                 pdf.ln(10)
