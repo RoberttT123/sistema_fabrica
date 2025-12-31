@@ -167,7 +167,7 @@ def gestionar_usuarios():
                 pdf = FPDF(orientation='L')
                 pdf.add_page()
                 if os.path.exists("logo.png"):
-                    pdf.image("logo.png", x=10, y=8, w=25) # Ajusta x, y, w según prefieras
+                    pdf.image("logo.png", x=10, y=8, w=20) # Ajusta x, y, w según prefieras
                 pdf.set_font("Arial", 'B', 16)
                 pdf.cell(0, 10, txt=f"REPORTE DE ASISTENCIA - {turno_ver.upper()}", ln=True, align='C')
                 pdf.ln(10)
