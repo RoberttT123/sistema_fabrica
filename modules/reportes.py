@@ -25,7 +25,7 @@ def exportar_inventario_pdf(df):
         pdf.cell(40, 10, str(row['Color']), 1)
         pdf.cell(30, 10, str(row['Cantidad']), 1)
         pdf.ln()
-    return pdf.output(dest='S').encode('latin-1')
+    return bytes(pdf.output())
 
 def exportar_ventas_pdf(df, fecha_inicio, fecha_fin):
     pdf = FPDF()
@@ -67,7 +67,7 @@ def exportar_ventas_pdf(df, fecha_inicio, fecha_fin):
     pdf.cell(125, 10, "INGRESOS TOTALES EN EL PERIODO", 1, 0, 'R')
     pdf.cell(65, 10, f"{total_acumulado:.2f} Bs", 1, 1, 'C')
         
-    return pdf.output(dest='S').encode('latin-1')
+    return bytes(pdf.output())
 
 def render_reportes():
     col_logo, col_titulo = st.columns([1, 4])

@@ -190,7 +190,7 @@ def gestionar_usuarios():
                         pdf.cell(32, 10, hora, 1, 0, 'C')
                     pdf.ln()
                 
-                pdf_bytes = pdf.output(dest='S').encode('latin-1')
+                pdf_bytes = pdf_bytes = bytes(pdf.output())
                 st.download_button("Click para descargar", pdf_bytes, f"asistencia_{turno_ver}.pdf")
         else:
             st.info(f"No hay registros para el {turno_ver} todavía.")
