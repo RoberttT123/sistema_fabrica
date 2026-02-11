@@ -74,7 +74,7 @@ def generar_pdf_produccion(fecha, df):
     pdf.cell(100, 10, "TOTAL GENERAL DEL DÍA:", 1, 0, 'R', True)
     pdf.cell(90, 10, f"{df['DOCENAS'].sum():.1f} DOCENAS", 1, 1, 'C', True)
 
-    return pdf.output(dest='S').encode('latin-1', errors='replace')
+    return pdf.output()
 
 def render_medias_crudo():
     st.header("🧦 Producción: Planchado en Crudo")
