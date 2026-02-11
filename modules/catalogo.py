@@ -1,12 +1,12 @@
 import streamlit as st
-import requests
 import urllib.parse
 import os
+# Importamos obtener_datos para leer directamente la DB sin depender de la API local
+from modules.database import obtener_datos 
 
 # --- CONFIGURACIÓN ---
 NUMERO_WHATSAPP = "59178790265" 
 
-# 1. ACTUALIZACIÓN DE COLORES: Añadimos los nuevos tonos de Stretch y Panty
 COLORES_HEX = {
     "Piel": "#F5D0B9", "Coñac": "#9E5B3A", "Negro": "#1A1A1A",
     "Azul": "#002366", "Humo": "#737373", "Marrón": "#4B2E2A",
@@ -40,80 +40,75 @@ def generar_link_whatsapp(producto, precio, color, linea):
     )
     return f"https://wa.me/{NUMERO_WHATSAPP}?text={urllib.parse.quote(mensaje)}"
 
-def obtener_productos_api(linea, tamano, color):
-    # Asegúrate de usar el puerto correcto (8000 u 8001 según tu API activa)
-    url = "http://localhost:8001/productos"
-    params = {
-        "linea": linea if linea != "Todos" else None,
-        "tamano": tamano if tamano != "Todos" else None,
-        "color": color if color != "Todos" else None
-    }
+# --- CORRECCIÓN CLAVE: LEER DIRECTO DE LA BASE DE DATOS ---
+def obtener_productos_db(linea, tamano, color):
+    query = "SELECT nombre, linea, tamano, color, cantidad as stock, precio_venta FROM inventario WHERE cantidad > 0"
+    params = []
+
+    if linea != "Todos":
+        query += " AND linea = ?"
+        params.append(linea)
+    
+    if tamano != "Todos":
+        query += " AND tamano = ?"
+        params.append(tamano)
+
+    if color != "Todos":
+        query += " AND color = ?"
+        params.append(color)
+
     try:
-        response = requests.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            return response.json()
+        return obtener_datos(query, tuple(params))
     except Exception:
-        return []
-    return []
+        return None
 
 def render_catalogo():
     st.markdown("<h1 style='text-align: center; color: #D44270;'>🧦 Catálogo de Fábrica</h1>", unsafe_allow_html=True)
     st.divider()
 
-    # --- 2. ACTUALIZACIÓN DE FILTROS ---
+    # --- FILTROS ---
     st.sidebar.header("🔍 Filtros de Búsqueda")
-    
     f_linea = st.sidebar.selectbox("Línea", ["Todos", "Lycra", "Panty", "Stretch"])
     
-    # Filtro de tipo dinámico según la línea
     opciones_tipo = ["Todos"]
-    if f_linea == "Lycra":
-        opciones_tipo += ["Soporte Lycra", "Pantalon Lycra"]
-    elif f_linea == "Panty":
-        opciones_tipo += ["Panty Grande", "Panty Mediano"]
-    elif f_linea == "Stretch":
-        opciones_tipo += ["Soporte Stretch", "Pantalon Stretch"]
+    if f_linea == "Lycra": opciones_tipo += ["Soporte Lycra", "Pantalon Lycra"]
+    elif f_linea == "Panty": opciones_tipo += ["Panty Grande", "Panty Mediano"]
+    elif f_linea == "Stretch": opciones_tipo += ["Soporte Stretch", "Pantalon Stretch"]
     
     f_tamano = st.sidebar.selectbox("Tipo de Media", opciones_tipo)
-    
-    # Filtro de color con la nueva lista extendida
     f_color = st.sidebar.selectbox("Color", ["Todos"] + sorted(list(COLORES_HEX.keys())))
 
-    # --- OBTENCIÓN Y RENDER ---
-    productos = obtener_productos_api(f_linea, f_tamano, f_color)
+    # Obtención de datos directa
+    df_productos = obtener_productos_db(f_linea, f_tamano, f_color)
 
-    if not productos:
-        st.info("💡 No hay stock con esos filtros.")
+    if df_productos is None or df_productos.empty:
+        st.info("💡 No hay stock con esos filtros en la base de datos.")
         return
 
+    # Renderizado en columnas
     cols = st.columns(3)
-    for i, prod in enumerate(productos):
-        # Datos seguros
-        val_nombre = prod.get('nombre', 'Sin nombre')
-        val_linea = prod.get('linea', 'General')
-        val_color = prod.get('color', 'Piel')
-        val_stock = prod.get('stock', 0)
-        val_precio = prod.get('precio_venta', 0.0)
-
+    for i, (_, prod) in enumerate(df_productos.iterrows()):
         with cols[i % 3]:
             with st.container(border=True):
-                # Imagen dinámica (formato: lycra_soporte_lycra_piel.jpg)
-                # O simplemente por línea y color si prefieres
-                nombre_img = f"{val_linea.lower()}_{val_color.lower().replace(' ', '_')}.jpg"
+                v_nombre = prod['nombre']
+                v_linea = prod['linea']
+                v_color = prod['color']
+                v_stock = prod['stock']
+                v_precio = prod['precio_venta']
+
+                # Lógica de imagen o color
+                nombre_img = f"{v_linea.lower()}_{v_color.lower().replace(' ', '_')}.jpg"
                 path_img = f"assets/{nombre_img}"
 
                 if os.path.exists(path_img):
                     st.image(path_img, use_container_width=True)
                 else:
-                    mostrar_color_alternativo(val_color)
+                    mostrar_color_alternativo(v_color)
 
-                st.subheader(val_nombre)
-                st.write(f"**🎨 Color:** {val_color}")
-                st.write(f"**📦 Stock:** {int(val_stock)} Docenas")
-                st.write(f"**💰 Precio:** :green[{val_precio:.2f} Bs]")
+                st.subheader(v_nombre)
+                st.write(f"**🎨 Color:** {v_color}")
+                st.write(f"**📦 Stock:** {int(v_stock)} Docenas")
+                st.write(f"**💰 Precio:** :green[{v_precio:.2f} Bs]")
                 
-                link_wa = generar_link_whatsapp(val_nombre, val_precio, val_color, val_linea)
+                link_wa = generar_link_whatsapp(v_nombre, v_precio, v_color, v_linea)
                 st.link_button("💬 Consultar", link_wa, use_container_width=True, type="primary")
-
-    st.markdown("---")
-    st.caption(f"Sincronizado con Inventario Real")
