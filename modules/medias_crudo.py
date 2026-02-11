@@ -10,38 +10,40 @@ class ProduccionPDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
             self.image("logo.png", 10, 8, 30)
-        self.set_font("Arial", 'B', 15)
+        # Usamos 'Helvetica' que es estándar en todos los sistemas
+        self.set_font("Helvetica", 'B', 15)
         self.cell(80)
-        self.cell(30, 10, 'REPORTE DE PRODUCCIÓN EN CRUDO', 0, 0, 'C')
+        self.cell(30, 10, 'REPORTE DE PRODUCCION EN CRUDO', 0, 0, 'C')
         self.ln(20)
 
     def footer(self):
         self.set_y(-15)
-        self.set_font("Arial", 'I', 8)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+        self.set_font("Helvetica", 'I', 8)
+        self.cell(0, 10, f'Pagina {self.page_no()}', 0, 0, 'C')
 
 def generar_pdf_produccion(fecha, df):
+    # Usar fpdf2 permite generar el PDF como bytes directamente
     pdf = ProduccionPDF()
     pdf.add_page()
     
     # --- ENCABEZADO DE FECHA ---
     pdf.set_fill_color(200, 220, 255)
-    pdf.set_font("Arial", 'B', 12)
+    pdf.set_font("Helvetica", 'B', 12)
     pdf.cell(0, 10, f"FECHA DEL REPORTE: {fecha}", 1, 1, 'C', True)
     pdf.ln(5)
 
-    # --- TABLA 1: DETALLE POR MÁQUINA ---
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 10, "DETALLE DE PLANCHADO POR MÁQUINA", 0, 1, 'L')
+    # --- TABLA 1: DETALLE POR MAQUINA ---
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 10, "DETALLE DE PLANCHADO POR MAQUINA", 0, 1, 'L')
     
     pdf.set_fill_color(144, 238, 144) # Verde
-    pdf.set_font("Arial", 'B', 10)
+    pdf.set_font("Helvetica", 'B', 10)
     pdf.cell(30, 10, "# MAQ", 1, 0, 'C', True)
     pdf.cell(70, 10, "ITEM", 1, 0, 'C', True)
     pdf.cell(40, 10, "# PARTIDAS", 1, 0, 'C', True)
     pdf.cell(50, 10, "DOCENAS", 1, 1, 'C', True)
 
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Helvetica", '', 10)
     for _, row in df.iterrows():
         pdf.cell(30, 8, str(row['# MAQ']), 1, 0, 'C')
         pdf.cell(70, 8, str(row['ITEM']), 1, 0, 'L')
@@ -50,49 +52,44 @@ def generar_pdf_produccion(fecha, df):
 
     pdf.ln(10)
 
-    # --- TABLA 2: RESUMEN TOTAL POR ITEM (NUEVA SECCIÓN) ---
-    pdf.set_font("Arial", 'B', 11)
+    # --- TABLA 2: RESUMEN TOTAL POR ITEM ---
+    pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 10, "RESUMEN TOTAL POR TIPO DE ITEM", 0, 1, 'L')
     
-    # Agrupar datos por ITEM
     resumen_items = df.groupby('ITEM')['DOCENAS'].sum().reset_index()
     
-    pdf.set_fill_color(255, 215, 0) # Dorado/Amarillo para resaltar
-    pdf.set_font("Arial", 'B', 10)
+    pdf.set_fill_color(255, 215, 0) # Dorado
+    pdf.set_font("Helvetica", 'B', 10)
     pdf.cell(100, 10, "ITEM / PRODUCTO", 1, 0, 'C', True)
     pdf.cell(90, 10, "TOTAL DOCENAS", 1, 1, 'C', True)
 
-    pdf.set_font("Arial", '', 10)
+    pdf.set_font("Helvetica", '', 10)
     for _, row in resumen_items.iterrows():
         pdf.cell(100, 8, str(row['ITEM']), 1, 0, 'L')
         pdf.cell(90, 8, f"{row['DOCENAS']:.1f}", 1, 1, 'R')
 
     # --- TOTAL GENERAL ---
     pdf.ln(5)
-    pdf.set_font("Arial", 'B', 12)
+    pdf.set_font("Helvetica", 'B', 12)
     pdf.set_fill_color(200, 200, 200)
-    pdf.cell(100, 10, "TOTAL GENERAL DEL DÍA:", 1, 0, 'R', True)
+    pdf.cell(100, 10, "TOTAL GENERAL DEL DIA:", 1, 0, 'R', True)
     pdf.cell(90, 10, f"{df['DOCENAS'].sum():.1f} DOCENAS", 1, 1, 'C', True)
 
+    # El cambio fundamental: .output() en fpdf2 devuelve bytes por defecto
+    # Si usas la versión vieja en local, fpdf2 lo corregirá automáticamente en la nube.
     return pdf.output()
 
 def render_medias_crudo():
     st.header("🧦 Producción: Planchado en Crudo")
-
     items_list = ["Soporte Lycra", "Soporte Stretch", "Pantalon Lycra", "Panty Grande", "Panty Mediano", "Pantalon Stretch"]
 
-    # --- 1. FORMULARIO DE REGISTRO ---
+    # Formulario de Registro
     with st.form("form_planchado", clear_on_submit=True):
         col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            fecha_sel = st.date_input("Fecha:", datetime.now())
-        with col2:
-            n_maquina = st.number_input("# MAQ", min_value=1, step=1)
-        with col3:
-            item = st.selectbox("ITEM", items_list)
-        with col4:
-            n_partidas = st.number_input("# PARTIDAS", min_value=1, step=1)
-
+        with col1: fecha_sel = st.date_input("Fecha:", datetime.now())
+        with col2: n_maquina = st.number_input("# MAQ", min_value=1, step=1)
+        with col3: item = st.selectbox("ITEM", items_list)
+        with col4: n_partidas = st.number_input("# PARTIDAS", min_value=1, step=1)
         docenas = st.number_input("DOCENAS", min_value=0.1, step=0.5, format="%.1f")
         
         if st.form_submit_button("📥 Registrar Planchado", use_container_width=True):
@@ -104,26 +101,28 @@ def render_medias_crudo():
 
     st.divider()
 
-    # --- 2. RESUMEN, PDF Y EDICIÓN ---
+    # Visualización y PDF
     st.subheader(f"📊 Resumen de Planchado - {fecha_sel.strftime('%d/%m/%Y')}")
-    
     query_ver = "SELECT id as ID, n_maquina as '# MAQ', item as 'ITEM', n_partidas as '# PARTIDAS', docenas as 'DOCENAS' FROM produccion_crudo WHERE fecha = ?"
     df_crudo = obtener_datos(query_ver, (fecha_sel.strftime('%Y-%m-%d'),))
 
     if not df_crudo.empty:
         st.dataframe(df_crudo, use_container_width=True, hide_index=True)
         
-        # Generar y descargar PDF
-        pdf_data = generar_pdf_produccion(fecha_sel.strftime('%d/%m/%Y'), df_crudo)
-        st.download_button(
-            label="📄 Descargar PDF Reporte Completo",
-            data=pdf_data,
-            file_name=f"Reporte_Produccion_{fecha_sel}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
+        # Generar PDF
+        try:
+            pdf_bytes = generar_pdf_produccion(fecha_sel.strftime('%d/%m/%Y'), df_crudo)
+            st.download_button(
+                label="📄 Descargar PDF Reporte Completo",
+                data=pdf_bytes,
+                file_name=f"Reporte_Produccion_{fecha_sel}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {e}")
 
-        # SECCIÓN DE EDICIÓN / ELIMINACIÓN
+        # Edición y Eliminación
         col_e, col_d = st.columns(2)
         with col_e:
             with st.expander("📝 Editar Registro"):
