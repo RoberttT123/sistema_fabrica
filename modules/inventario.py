@@ -1,83 +1,115 @@
 import streamlit as st
 import time
+from datetime import datetime
 from modules.database import ejecutar_consulta, obtener_datos
 
 def render_inventario():
     st.header("🧦 Inventario de Medias Terminadas")
     
+    # 1. DEFINICIÓN DE LA ESTRUCTURA DE PRODUCTOS
+    # Diccionario con Linea -> Tipos -> Colores
+    ESTRUCTURA_PRODUCTOS = {
+        "Lycra": {
+            "Soporte Lycra": ["Romance", "Piel", "Coñac", "Tabaco", "Acacia", "Carbón", "Humo"],
+            "Pantalon Lycra": ["Romance", "Piel", "Coñac", "Tabaco"]
+        },
+        "Panty": {
+            "Panty Grande": ["Romance", "Piel", "Coñac", "Tabaco", "Negro", "Blanco"],
+            "Panty Mediano": ["Romance", "Piel", "Coñac", "Tabaco", "Negro"]
+        },
+        "Stretch": {
+            "Soporte Stretch": ["Hueso blanco", "Hueso rosado", "Beige", "Dumbo", "Romance", "Coñac", "Tabaco", "Cartón", "Acacia", "Calipso", "Chocolate", "Almendra", "Humo plata", "Humo oscuro", "Uva", "Api", "Carbón", "Negro"],
+            "Pantalon Stretch": ["Hueso blanco", "Hueso rosado", "Beige", "Dumbo", "Romance", "Coñac", "Tabaco", "Cartón", "Acacia", "Calipso", "Chocolate", "Almendra", "Humo plata", "Humo oscuro", "Uva", "Api", "Carbón", "Negro"]
+        }
+    }
+
     tab_stock, tab_gestion = st.tabs(["📋 Stock en Bodega", "⚙️ Gestión de Inventario"])
 
-    # --- TAB 1: VER STOCK ---
     with tab_stock:
         st.subheader("Existencias Actuales")
-        # Usamos COALESCE en SQL para que si es NULL devuelva 'Sin especificar'
-        query_ver = """
-            SELECT 
-                id as ID, 
-                nombre as Detalle, 
-                COALESCE(color, 'Sin especificar') as Color, 
-                cantidad as Cantidad, 
-                fecha_actualizacion as 'Última Carga' 
-            FROM inventario
-        """
-        df = obtener_datos(query_ver)
-        
+        df = obtener_datos("SELECT id as ID, linea as Línea, tamano as Tipo, nombre as Detalle, color as Color, cantidad as Cantidad, precio_venta as Precio, fecha_actualizacion as 'Última Carga' FROM inventario ORDER BY fecha_actualizacion DESC")
         if not df.empty:
             st.dataframe(df, use_container_width=True)
         else:
-            st.info("No hay medias registradas en el inventario aún.")
+            st.info("No hay registros aún.")
 
-    # --- TAB 2: AGREGAR / EDITAR / ELIMINAR ---
     with tab_gestion:
-        col_izq, col_der = st.columns(2)
+        st.subheader("➕ Registrar Nuevo Producto")
+        
+        # Selectores fuera del Form para que sean dinámicos (Streamlit requiere esto para actualizar opciones)
+        col_1, col_2, col_3 = st.columns(3)
+        
+        with col_1:
+            linea_sel = st.selectbox("1. Seleccione Línea", list(ESTRUCTURA_PRODUCTOS.keys()))
+        
+        with col_2:
+            tipos_disponibles = list(ESTRUCTURA_PRODUCTOS[linea_sel].keys())
+            tipo_sel = st.selectbox("2. Seleccione Tipo", tipos_disponibles)
+            
+        with col_3:
+            colores_disponibles = ESTRUCTURA_PRODUCTOS[linea_sel][tipo_sel]
+            color_sel = st.selectbox("3. Seleccione Color", colores_disponibles)
 
-        with col_izq:
-            st.subheader("➕ Registrar Nuevo")
-            with st.form("form_nuevo_inv", clear_on_submit=True):
-                det = st.text_input("Detalle (ej. Media Escolar)")
-                col = st.text_input("Color")
-                cant = st.number_input("Cantidad", min_value=0, step=1)
-                
-                if st.form_submit_button("Guardar en Bodega"):
-                    if det and col:
-                        # Aseguramos que el color no sea solo espacios en blanco
-                        color_final = col.strip() if col.strip() != "" else "Sin color"
-                        query = "INSERT INTO inventario (nombre, color, cantidad, tipo) VALUES (?, ?, ?, 'Media')"
-                        ejecutar_consulta(query, (det, color_final, cant))
-                        st.success("✅ Registrado con éxito.")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("⚠️ Completa Detalle y Color.")
+        # Formulario para el resto de datos
+        with st.form("form_nuevo_inv", clear_on_submit=True):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                cant = st.number_input("Cantidad inicial", min_value=0, step=1)
+            with col_b:
+                precio = st.number_input("Precio de Venta (Bs)", min_value=0.0, format="%.2f")
+            
+            detalle_final = f"{tipo_sel}" # El nombre se genera automáticamente
+            
+            if st.form_submit_button("🚀 Guardar en Inventario", use_container_width=True):
+                hora_registro = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                query = """
+                    INSERT INTO inventario (nombre, linea, tamano, color, cantidad, precio_venta, fecha_actualizacion) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """
+                # Guardamos 'tipo_sel' en la columna 'tamano' para mantener compatibilidad con tu DB
+                ejecutar_consulta(query, (detalle_final, linea_sel, tipo_sel, color_sel, cant, precio, hora_registro))
+                st.success(f"✅ Registrado: {detalle_final} - {color_sel}")
+                time.sleep(1)
+                st.rerun()
 
-        with col_der:
-            st.subheader("📝 Editar o Eliminar")
-            id_sel = st.number_input("ID del producto", min_value=1, step=1, key="id_inv_gest")
+        st.markdown("---")
+
+        # --- SECCIÓN EDITAR/DUPLICAR ---
+        with st.expander("🛠️ MODIFICAR O DUPLICAR PRODUCTO"):
+            id_sel = st.number_input("Ingrese ID del producto", min_value=1, step=1)
             datos = obtener_datos("SELECT * FROM inventario WHERE id = ?", (id_sel,))
 
             if not datos.empty:
-                # Manejo del valor del color para el formulario de edición
-                val_color_db = datos.iloc[0]['color']
-                # Si el valor es None o nulo en Python, ponemos string vacío para el text_input
-                val_color_input = str(val_color_db) if val_color_db is not None else ""
-
+                prod = datos.iloc[0]
+                st.info(f"Editando: {prod['nombre']} ({prod['color']})")
+                
+                # Para editar, usamos selectores simples para no complicar la lógica de edición rápida
                 with st.form("form_edit_inv"):
-                    e_det = st.text_input("Detalle", value=datos.iloc[0]['nombre'])
-                    e_col = st.text_input("Color", value=val_color_input)
-                    e_cant = st.number_input("Cantidad", value=int(datos.iloc[0]['cantidad']))
+                    e_col1, e_col2, e_col3 = st.columns(3)
+                    with e_col1:
+                        e_lin = st.selectbox("Línea", list(ESTRUCTURA_PRODUCTOS.keys()))
+                        e_tipo = st.text_input("Tipo (Editable)", value=prod['tamano'])
+                    with e_col2:
+                        e_col = st.text_input("Color (Editable)", value=prod['color'])
+                        e_cant = st.number_input("Cantidad", value=int(prod['cantidad']))
+                    with e_col3:
+                        e_prec = st.number_input("Precio (Bs)", value=float(prod['precio_venta'] or 0.0))
                     
-                    btn1, btn2 = st.columns(2)
-                    if btn1.form_submit_button("💾 Actualizar"):
-                        color_editado = e_col.strip() if e_col.strip() != "" else "Sin color"
-                        ejecutar_consulta("UPDATE inventario SET nombre=?, color=?, cantidad=? WHERE id=?", (e_det, color_editado, e_cant, id_sel))
-                        st.success("Actualizado.")
-                        time.sleep(1)
-                        st.rerun()
+                    st.divider()
+                    b1, b2, b3 = st.columns(3)
                     
-                    if btn2.form_submit_button("🗑️ Eliminar"):
+                    if b1.form_submit_button("💾 Guardar"):
+                        hora_edit = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        ejecutar_consulta("UPDATE inventario SET linea=?, tamano=?, color=?, cantidad=?, precio_venta=?, fecha_actualizacion=? WHERE id=?", 
+                                         (e_lin, e_tipo, e_col, e_cant, e_prec, hora_edit, id_sel))
+                        st.success("Actualizado"); time.sleep(1); st.rerun()
+
+                    if b2.form_submit_button("👯 Duplicar"):
+                        hora_dup = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        ejecutar_consulta("INSERT INTO inventario (nombre, linea, tamano, color, cantidad, precio_venta, fecha_actualizacion) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+                                         (e_tipo, e_lin, e_tipo, e_col, e_cant, e_prec, hora_dup))
+                        st.success("Duplicado"); time.sleep(1); st.rerun()
+                    
+                    if b3.form_submit_button("🗑️ Eliminar", type="primary"):
                         ejecutar_consulta("DELETE FROM inventario WHERE id=?", (id_sel,))
-                        st.warning("Eliminado.")
-                        time.sleep(1)
-                        st.rerun()
-            else:
-                st.info("Selecciona un ID válido para editar.")
+                        st.warning("Eliminado"); time.sleep(1); st.rerun()

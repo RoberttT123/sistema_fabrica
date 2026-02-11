@@ -1,5 +1,5 @@
 import streamlit as st
-import time
+import time 
 from modules.database import ejecutar_consulta, obtener_datos
 
 def realizar_pedido():

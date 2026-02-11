@@ -2,89 +2,124 @@ import streamlit as st
 import os
 import time
 from modules.auth import login, logout
-from modules.usuarios_logic import gestionar_usuarios
+from modules.clientes import render_clientes
+from modules.trabajadores import render_trabajadores
 from modules.inventario import render_inventario
+from modules.medias_crudo import render_medias_crudo # Importación del nuevo módulo
 from modules.pedidos import realizar_pedido
 from modules.reportes import render_reportes
-from modules.catalogo import render_catalogo  # Asegúrate de crear este archivo
+from modules.catalogo import render_catalogo 
 
-# 1. Configuración de la página (Debe ser la primera instrucción de Streamlit)
+# 1. Configuración de la página
 st.set_page_config(
-    page_title="Fábrica de Medias - Catálogo y Sistema", 
+    page_title="Fábrica de Medias - Sistema de Producción", 
     layout="wide", 
     initial_sidebar_state="expanded"
 )
 
+# 2. CSS para ocultar Deploy y Menú de 3 puntos (Lado derecho)
+st.markdown("""
+    <style>
+        /* Oculta el contenedor de la derecha (Deploy y puntos) */
+        .stAppDeployButton, 
+        #MainMenu, 
+        header [data-testid="stHeaderActionElements"] {
+            display: none !important;
+        }
+        /* Asegura que el header sea transparente para no estorbar */
+        header {
+            background-color: rgba(0,0,0,0);
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 def main():
-    # --- LOGO EN LA BARRA LATERAL ---
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
     
-    # 2. Inicialización de variables de sesión
     if 'autenticado' not in st.session_state:
         st.session_state.autenticado = False
 
-    # --- 3. LÓGICA DE NAVEGACIÓN PÚBLICA (CLIENTES) vs PRIVADA (PERSONAL) ---
-    
     if not st.session_state.autenticado:
-        # Menú para personas que NO han iniciado sesión
         st.sidebar.title("Navegación")
         opcion_publica = st.sidebar.radio("Ir a:", ["🛍️ Ver Catálogo", "🔐 Acceso Personal"])
         
         if opcion_publica == "🛍️ Ver Catálogo":
-            render_catalogo()  # Los clientes ven los productos aquí
+            render_catalogo()
         else:
-            login()  # Aquí se muestra el formulario de login
+            login()
             
     else:
-        # --- 4. BARRA LATERAL PARA USUARIOS AUTENTICADOS ---
+        # --- BARRA LATERAL PARA USUARIOS AUTENTICADOS ---
         st.sidebar.title(f"👋 Hola, {st.session_state.usuario}")
         st.sidebar.info(f"Rol actual: **{st.session_state.rol}**")
         st.sidebar.markdown("---")
         
-        # Definición de Menú según Rol
-        if st.session_state.rol == "Jefe":
-            menu = [
-                "📊 Dashboard / Reportes", 
-                "👥 Usuarios y Clientes", 
-                "📦 Inventario de Medias", 
-                "🛒 Realizar Pedido", 
-                "🛍️ Ver Catálogo Público"
-            ]
-        else:
-            # El empleado solo ve lo necesario para registrar asistencia e inventario
-            # El "Registro de Asistencia" suele estar dentro de gestionar_usuarios
-            menu = ["👥 Asistencia", "📦 Inventario de Medias", "🛒 Realizar Pedido"]
+        # Inicializar la elección por defecto si no existe
+        if 'menu_choice' not in st.session_state:
+            st.session_state.menu_choice = "Dashboard"
 
-        choice = st.sidebar.radio("Menú Principal", menu)
+        # --- BOTONES PARA EL ROL JEFE ---
+        if st.session_state.rol == "Jefe":
+            if st.sidebar.button("📊 Dashboard / Reportes", use_container_width=True):
+                st.session_state.menu_choice = "Dashboard"
+
+            # NUEVO BOTÓN: Medias Crudo
+            if st.sidebar.button("🧶 Producción Crudo", use_container_width=True):
+                st.session_state.menu_choice = "MediasCrudo"
+            
+            if st.sidebar.button("👥 Clientes", use_container_width=True):
+                st.session_state.menu_choice = "Clientes"
+                
+            if st.sidebar.button("👷 Trabajadores", use_container_width=True):
+                st.session_state.menu_choice = "Trabajadores"
+            
+            if st.sidebar.button("📦 Inventario de Medias", use_container_width=True):
+                st.session_state.menu_choice = "Inventario"
+            
+            if st.sidebar.button("🛒 Realizar Pedido", use_container_width=True):
+                st.session_state.menu_choice = "Pedido"
+                
+            if st.sidebar.button("🛍️ Ver Catálogo Público", use_container_width=True):
+                st.session_state.menu_choice = "Catalogo"
         
+        else:
+            # Menú simplificado para empleados
+            menu_emp = ["🧶 Producción Crudo", "📦 Inventario de Medias", "🛒 Realizar Pedido"]
+            choice_emp = st.sidebar.radio("Menú Principal", menu_emp)
+            
+            # Mapeo de elección de radio a menu_choice
+            if choice_emp == "🧶 Producción Crudo": st.session_state.menu_choice = "MediasCrudo"
+            elif choice_emp == "📦 Inventario de Medias": st.session_state.menu_choice = "Inventario"
+            elif choice_emp == "🛒 Realizar Pedido": st.session_state.menu_choice = "Pedido"
+
         st.sidebar.markdown("---")
         if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
             logout()
 
-        # --- 5. RENDERIZADO DE MÓDULOS SEGÚN SELECCIÓN ---
-        
-        if choice == "📊 Dashboard / Reportes":
+        # --- LÓGICA DE NAVEGACIÓN (RENDERIZADO) ---
+        choice = st.session_state.menu_choice
+
+        if choice == "Dashboard":
             render_reportes()
             
-        elif choice == "👥 Usuarios y Clientes" or choice == "👥 Asistencia":
-            # Nota: Si el rol es empleado, gestionar_usuarios() mostrará solo la pestaña de asistencia
-            gestionar_usuarios()
+        elif choice == "MediasCrudo":
+            render_medias_crudo()
             
-        elif choice == "📦 Inventario de Medias":
+        elif choice == "Clientes":
+            render_clientes()
+            
+        elif choice == "Trabajadores":
+            render_trabajadores()
+            
+        elif choice == "Inventario":
             render_inventario()
             
-        elif choice == "🛒 Realizar Pedido":
+        elif choice == "Pedido":
             realizar_pedido()
             
-        elif choice == "🛍️ Ver Catálogo Público":
+        elif choice == "Catalogo":
             render_catalogo()
 
-# 6. Verificación de archivo de base de datos (Útil para depuración en la nube)
-def check_database():
-    if not os.path.exists('sistema_ventas.db'):
-        st.error("⚠️ No se encontró el archivo 'sistema_ventas.db'. Por favor, asegúrate de subirlo a GitHub.")
-
 if __name__ == "__main__":
-    # check_database() # Descomenta esta línea si quieres verificar la DB al iniciar
     main()
