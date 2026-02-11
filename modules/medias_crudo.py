@@ -1,3 +1,4 @@
+import io
 import streamlit as st
 import pandas as pd
 import time
@@ -21,8 +22,9 @@ class ProduccionPDF(FPDF):
         self.set_font("Helvetica", 'I', 8)
         self.cell(0, 10, f'Pagina {self.page_no()}', 0, 0, 'C')
 
+import io  # <--- Agrega esta importación al inicio del archivo
+
 def generar_pdf_produccion(fecha, df):
-    # Usar fpdf2 permite generar el PDF como bytes directamente
     pdf = ProduccionPDF()
     pdf.add_page()
     
@@ -33,11 +35,8 @@ def generar_pdf_produccion(fecha, df):
     pdf.ln(5)
 
     # --- TABLA 1: DETALLE POR MAQUINA ---
-    pdf.set_font("Helvetica", 'B', 11)
-    pdf.cell(0, 10, "DETALLE DE PLANCHADO POR MAQUINA", 0, 1, 'L')
-    
-    pdf.set_fill_color(144, 238, 144) # Verde
     pdf.set_font("Helvetica", 'B', 10)
+    pdf.set_fill_color(144, 238, 144) 
     pdf.cell(30, 10, "# MAQ", 1, 0, 'C', True)
     pdf.cell(70, 10, "ITEM", 1, 0, 'C', True)
     pdf.cell(40, 10, "# PARTIDAS", 1, 0, 'C', True)
@@ -57,9 +56,7 @@ def generar_pdf_produccion(fecha, df):
     pdf.cell(0, 10, "RESUMEN TOTAL POR TIPO DE ITEM", 0, 1, 'L')
     
     resumen_items = df.groupby('ITEM')['DOCENAS'].sum().reset_index()
-    
-    pdf.set_fill_color(255, 215, 0) # Dorado
-    pdf.set_font("Helvetica", 'B', 10)
+    pdf.set_fill_color(255, 215, 0) 
     pdf.cell(100, 10, "ITEM / PRODUCTO", 1, 0, 'C', True)
     pdf.cell(90, 10, "TOTAL DOCENAS", 1, 1, 'C', True)
 
@@ -68,16 +65,12 @@ def generar_pdf_produccion(fecha, df):
         pdf.cell(100, 8, str(row['ITEM']), 1, 0, 'L')
         pdf.cell(90, 8, f"{row['DOCENAS']:.1f}", 1, 1, 'R')
 
-    # --- TOTAL GENERAL ---
-    pdf.ln(5)
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.set_fill_color(200, 200, 200)
-    pdf.cell(100, 10, "TOTAL GENERAL DEL DIA:", 1, 0, 'R', True)
-    pdf.cell(90, 10, f"{df['DOCENAS'].sum():.1f} DOCENAS", 1, 1, 'C', True)
+    # --- SALIDA SEGURA (SOLUCIÓN AL ERROR) ---
+    # Convertimos el bytearray a bytes puros dentro de un buffer
+    return bytes(pdf.output())
 
-    # El cambio fundamental: .output() en fpdf2 devuelve bytes por defecto
-    # Si usas la versión vieja en local, fpdf2 lo corregirá automáticamente en la nube.
-    return pdf.output()
+# --- DENTRO DE render_medias_crudo() ---
+# Asegúrate de que el st.download_button esté así:
 
 def render_medias_crudo():
     st.header("🧦 Producción: Planchado en Crudo")
@@ -109,12 +102,12 @@ def render_medias_crudo():
     if not df_crudo.empty:
         st.dataframe(df_crudo, use_container_width=True, hide_index=True)
         
-        # Generar PDF
         try:
             pdf_bytes = generar_pdf_produccion(fecha_sel.strftime('%d/%m/%Y'), df_crudo)
+            
             st.download_button(
                 label="📄 Descargar PDF Reporte Completo",
-                data=pdf_bytes,
+                data=pdf_bytes,  # Ahora enviamos bytes puros
                 file_name=f"Reporte_Produccion_{fecha_sel}.pdf",
                 mime="application/pdf",
                 use_container_width=True
