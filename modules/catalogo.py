@@ -1,7 +1,7 @@
 import streamlit as st
 import urllib.parse
 import os
-# Importamos obtener_datos para leer directamente la DB sin depender de la API local
+# Importamos obtener_datos para leer directamente la DB de Supabase
 from modules.database import obtener_datos 
 
 # --- CONFIGURACIÓN ---
@@ -40,26 +40,29 @@ def generar_link_whatsapp(producto, precio, color, linea):
     )
     return f"https://wa.me/{NUMERO_WHATSAPP}?text={urllib.parse.quote(mensaje)}"
 
-# --- CORRECCIÓN CLAVE: LEER DIRECTO DE LA BASE DE DATOS ---
+# --- CONSULTA OPTIMIZADA PARA POSTGRES/SUPABASE ---
 def obtener_productos_db(linea, tamano, color):
+    # Usamos sintaxis de Postgres
     query = "SELECT nombre, linea, tamano, color, cantidad as stock, precio_venta FROM inventario WHERE cantidad > 0"
     params = []
 
     if linea != "Todos":
-        query += " AND linea = ?"
+        query += " AND linea = %s"
         params.append(linea)
     
     if tamano != "Todos":
-        query += " AND tamano = ?"
+        query += " AND tamano = %s"
         params.append(tamano)
 
     if color != "Todos":
-        query += " AND color = ?"
+        query += " AND color = %s"
         params.append(color)
 
     try:
+        # obtener_datos devolverá un DataFrame usando psycopg2
         return obtener_datos(query, tuple(params))
-    except Exception:
+    except Exception as e:
+        st.error(f"Error al cargar catálogo: {e}")
         return None
 
 def render_catalogo():
@@ -78,14 +81,14 @@ def render_catalogo():
     f_tamano = st.sidebar.selectbox("Tipo de Media", opciones_tipo)
     f_color = st.sidebar.selectbox("Color", ["Todos"] + sorted(list(COLORES_HEX.keys())))
 
-    # Obtención de datos directa
+    # Obtención de datos directa de Supabase
     df_productos = obtener_productos_db(f_linea, f_tamano, f_color)
 
     if df_productos is None or df_productos.empty:
-        st.info("💡 No hay stock con esos filtros en la base de datos.")
+        st.info("💡 No hay stock con esos filtros en la base de datos de la nube.")
         return
 
-    # Renderizado en columnas
+    # Renderizado en columnas (Cambiado width="stretch" para evitar warnings)
     cols = st.columns(3)
     for i, (_, prod) in enumerate(df_productos.iterrows()):
         with cols[i % 3]:
@@ -101,7 +104,8 @@ def render_catalogo():
                 path_img = f"assets/{nombre_img}"
 
                 if os.path.exists(path_img):
-                    st.image(path_img, use_container_width=True)
+                    # Usamos width="stretch" para cumplir con la nueva versión de Streamlit
+                    st.image(path_img, width="stretch")
                 else:
                     mostrar_color_alternativo(v_color)
 
@@ -111,4 +115,5 @@ def render_catalogo():
                 st.write(f"**💰 Precio:** :green[{v_precio:.2f} Bs]")
                 
                 link_wa = generar_link_whatsapp(v_nombre, v_precio, v_color, v_linea)
-                st.link_button("💬 Consultar", link_wa, use_container_width=True, type="primary")
+                # El botón de WhatsApp ahora es compatible con el ancho de columna
+                st.link_button("💬 Consultar", link_wa, width="stretch", type="primary")
