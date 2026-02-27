@@ -1,0 +1,20 @@
+# --- SECRETOS Y CONFIGURACIÓN ---
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# --- BASES DE DATOS LOCALES ---
+*.db
+*.sqlite3
+sistema_ventas.db
+
+# --- PYTHON Y TEMPORALES ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# --- ARCHIVOS DE SISTEMA Y VS CODE ---
+.DS_Store
+.vscode/
+.devcontainer/
