@@ -20,17 +20,29 @@ st.set_page_config(
 
 # 2. CSS Optimizado para la nube
 # Mantenemos el bloqueo de elementos de desarrollo para una apariencia profesional
+# 2. CSS Optimizado para ocultar TODA la barra superior y menús de edición
 st.markdown("""
     <style>
+        /* Oculta el botón de "Deploy", "Share", la estrella y el menú de edición */
         .stAppDeployButton, 
         #MainMenu, 
-        header [data-testid="stHeaderActionElements"] {
+        header, 
+        footer {
+            visibility: hidden;
+            height: 0% !important;
+        }
+
+        /* Bloquea específicamente la barra de herramientas superior (lápiz, git, etc) */
+        [data-testid="stHeader"] {
             display: none !important;
         }
-        header {
-            background-color: rgba(0,0,0,0);
+
+        /* Quita el espacio en blanco que deja la barra superior oculta */
+        .block-container {
+            padding-top: 1rem !important;
         }
-        /* Ajuste de botones en la barra lateral */
+
+        /* Ajuste de botones en la barra lateral (manteniendo tu estilo previo) */
         div.stButton > button {
             border-radius: 5px;
             height: 3em;
