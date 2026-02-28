@@ -18,42 +18,32 @@ st.set_page_config(
     page_icon="🧦"
 )
 
-# 2. CSS Optimizado - Oculta herramientas pero mantiene el Menú en Celulares
 st.markdown("""
     <style>
-        /* 1. Ocultar el botón de Deploy/Share y el footer */
-        .stAppDeployButton, footer {
+        /* 1. Hacemos que la barra superior sea transparente */
+        header[data-testid="stHeader"] {
+            background-color: rgba(0, 0, 0, 0) !important;
+            border-bottom: none !important;
+        }
+
+        /* 2. Ocultamos los botones de la derecha (Share, Star, Edit, GitHub) */
+        /* Pero NO ocultamos el header completo para que el botón ">" siga ahí */
+        .stAppDeployButton, 
+        [data-testid="stHeaderActionElements"],
+        #MainMenu {
             display: none !important;
         }
 
-        /* 2. Ocultar solo los iconos de la derecha (estrella, lápiz, GitHub) */
-        /* Pero dejamos que el header exista para que el botón de menú sea visible */
-        header [data-testid="stHeaderActionElements"] {
-            display: none !important;
-        }
-
-        /* 3. Estilizar el header para que sea transparente y no estorbe */
-        header {
-            background-color: rgba(0,0,0,0) !important;
+        /* 3. Aseguramos que el botón del menú (las flechitas >>) sea visible */
+        /* Si tu fondo es oscuro, lo ponemos blanco. Si es claro, ponlo black */
+        button[data-testid="stBaseButton-headerNoPadding"] {
             color: white !important;
+            background-color: transparent !important;
         }
 
-        /* 4. Asegurar que el botón del menú (hamburguesa) sea visible */
-        button[data-testid="sidebar-button"] {
-            background-color: rgba(255, 75, 75, 0.5) !important; /* Un fondo sutil rojo para que se vea */
-            border-radius: 50%;
-        }
-
-        /* 5. Ajuste de espacio superior */
+        /* 4. Quitamos el margen excesivo para que el catálogo suba */
         .block-container {
             padding-top: 2rem !important;
-        }
-
-        /* Tus estilos de botones previos */
-        div.stButton > button {
-            border-radius: 5px;
-            height: 3em;
-            transition: all 0.3s ease;
         }
     </style>
 """, unsafe_allow_html=True)
