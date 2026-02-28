@@ -20,40 +20,45 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* 1. Hacer la barra superior totalmente transparente */
+        /* 1. Barra superior totalmente transparente */
         header[data-testid="stHeader"] {
             background-color: rgba(0, 0, 0, 0) !important;
             border-bottom: none !important;
-            z-index: 999; /* Asegura que el botón de menú esté arriba */
         }
 
-        /* 2. Ocultar TODOS los elementos de la derecha (estrella, share, etc.) */
-        /* Usamos el contenedor de acciones para borrarlos de un solo golpe */
+        /* 2. Ocultar TODO el grupo de botones de la derecha (GitHub, Fork, Star, Share) */
         [data-testid="stHeaderActionElements"] {
             display: none !important;
-            visibility: hidden !important;
         }
 
-        /* 3. Ocultar el botón "Deploy" si aún aparece */
+        /* 3. Ocultar específicamente el botón de 'Deploy' y 'Fork' */
         .stAppDeployButton {
             display: none !important;
         }
 
-        /* 4. MANTENER EL BOTÓN DE MENÚ (>>) VISIBLE */
-        /* Forzamos que el botón del lado izquierdo sea blanco y clickeable */
-        header[data-testid="stHeader"] button {
-            color: white !important;
-            background: transparent !important;
+        /* 4. Ocultar el menú de usuario (tu cuenta) y los 3 puntos de la derecha */
+        #MainMenu, 
+        [data-testid="stToolbar"], 
+        [data-testid="stDecoration"] {
+            display: none !important;
         }
 
-        /* 5. Ajuste para que el catálogo no quede muy abajo */
+        /* 5. MANTENER VISIBLE EL BOTÓN DE MENÚ (>>) */
+        /* Localizamos el botón que NO está en el grupo de acción de la derecha */
+        header[data-testid="stHeader"] button:not([aria-label="share"]):not([aria-label="favorite"]) {
+            color: white !important;
+            opacity: 1 !important;
+        }
+
+        /* 6. Eliminar cualquier borde o sombra que delate la barra */
+        [data-testid="stHeader"]::before {
+            background-image: none !important;
+            display: none !important;
+        }
+
+        /* 7. Pegar el contenido al tope de la pantalla */
         .block-container {
             padding-top: 0rem !important;
-        }
-
-        /* 6. Eliminar el menú de opciones (los 3 puntos de la derecha) */
-        #MainMenu {
-            display: none !important;
         }
     </style>
 """, unsafe_allow_html=True)
