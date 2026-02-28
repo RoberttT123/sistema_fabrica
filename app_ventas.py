@@ -20,30 +20,40 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* 1. Hacemos que la barra superior sea transparente */
+        /* 1. Hacer la barra superior totalmente transparente */
         header[data-testid="stHeader"] {
             background-color: rgba(0, 0, 0, 0) !important;
             border-bottom: none !important;
+            z-index: 999; /* Asegura que el botón de menú esté arriba */
         }
 
-        /* 2. Ocultamos los botones de la derecha (Share, Star, Edit, GitHub) */
-        /* Pero NO ocultamos el header completo para que el botón ">" siga ahí */
-        .stAppDeployButton, 
-        [data-testid="stHeaderActionElements"],
-        #MainMenu {
+        /* 2. Ocultar TODOS los elementos de la derecha (estrella, share, etc.) */
+        /* Usamos el contenedor de acciones para borrarlos de un solo golpe */
+        [data-testid="stHeaderActionElements"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* 3. Ocultar el botón "Deploy" si aún aparece */
+        .stAppDeployButton {
             display: none !important;
         }
 
-        /* 3. Aseguramos que el botón del menú (las flechitas >>) sea visible */
-        /* Si tu fondo es oscuro, lo ponemos blanco. Si es claro, ponlo black */
-        button[data-testid="stBaseButton-headerNoPadding"] {
+        /* 4. MANTENER EL BOTÓN DE MENÚ (>>) VISIBLE */
+        /* Forzamos que el botón del lado izquierdo sea blanco y clickeable */
+        header[data-testid="stHeader"] button {
             color: white !important;
-            background-color: transparent !important;
+            background: transparent !important;
         }
 
-        /* 4. Quitamos el margen excesivo para que el catálogo suba */
+        /* 5. Ajuste para que el catálogo no quede muy abajo */
         .block-container {
-            padding-top: 2rem !important;
+            padding-top: 0rem !important;
+        }
+
+        /* 6. Eliminar el menú de opciones (los 3 puntos de la derecha) */
+        #MainMenu {
+            display: none !important;
         }
     </style>
 """, unsafe_allow_html=True)
