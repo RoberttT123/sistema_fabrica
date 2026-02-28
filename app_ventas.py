@@ -20,35 +20,31 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* 1. Hacemos la barra superior invisible pero funcional */
+        /* 1. Volvemos transparente la barra superior */
         header[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important; /* Totalmente transparente */
+            background-color: rgba(0,0,0,0) !important;
             color: rgba(0,0,0,0) !important;
         }
 
-        /* 2. Ocultamos específicamente los botones de la derecha (Share, Estrella, etc.) */
-        /* Buscamos el contenedor de los elementos de acción a la derecha */
-        [data-testid="stHeaderActionElements"] {
+        /* 2. Ocultamos específicamente los botones de la derecha (Share, Estrella, etc) */
+        /* Esto los hace invisibles y no clickeables */
+        header[data-testid="stHeader"] [data-testid="stHeaderActionElements"] {
             display: none !important;
         }
 
-        /* 3. Aseguramos que el botón del menú (flecha/hamburguesa) SEA VISIBLE */
-        /* Forzamos el color blanco o el color de tu texto para que se vea en el celular */
-        header button {
-            color: white !important; 
+        /* 3. ASEGURAMOS que el botón del menú lateral (flecha o hamburguesa) sea visible */
+        /* Le damos el color de tu texto principal o un blanco para que resalte en el fondo oscuro */
+        header[data-testid="stHeader"] button {
+            color: #ffffff !important; 
+            visibility: visible !important;
         }
 
-        /* 4. Ocultamos el menú de opciones (los 3 puntitos de Streamlit) */
-        #MainMenu {
+        /* 4. Quitamos el botón de "Deploy" que a veces sale al lado del share */
+        .stAppDeployButton {
             display: none !important;
         }
 
-        /* 5. Ajuste para que el contenido no quede tan pegado arriba en PC */
-        .block-container {
-            padding-top: 2rem !important;
-        }
-        
-        /* Tus estilos de botones del sidebar se mantienen igual */
+        /* Ajuste de botones en la barra lateral */
         div.stButton > button {
             border-radius: 5px;
             height: 3em;
