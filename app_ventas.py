@@ -18,39 +18,42 @@ st.set_page_config(
     page_icon="🧦"
 )
 
-# 2. CSS Optimizado para la nube
-# Mantenemos el bloqueo de elementos de desarrollo para una apariencia profesional
-# 2. CSS Optimizado para ocultar TODA la barra superior y menús de edición
+# 2. CSS Optimizado - Oculta herramientas pero mantiene el Menú en Celulares
 st.markdown("""
     <style>
-        /* Oculta el botón de "Deploy", "Share", la estrella y el menú de edición */
-        .stAppDeployButton, 
-        #MainMenu, 
-        header, 
-        footer {
-            visibility: hidden;
-            height: 0% !important;
-        }
-
-        /* Bloquea específicamente la barra de herramientas superior (lápiz, git, etc) */
-        [data-testid="stHeader"] {
+        /* 1. Ocultar el botón de Deploy/Share y el footer */
+        .stAppDeployButton, footer {
             display: none !important;
         }
 
-        /* Quita el espacio en blanco que deja la barra superior oculta */
-        .block-container {
-            padding-top: 1rem !important;
+        /* 2. Ocultar solo los iconos de la derecha (estrella, lápiz, GitHub) */
+        /* Pero dejamos que el header exista para que el botón de menú sea visible */
+        header [data-testid="stHeaderActionElements"] {
+            display: none !important;
         }
 
-        /* Ajuste de botones en la barra lateral (manteniendo tu estilo previo) */
+        /* 3. Estilizar el header para que sea transparente y no estorbe */
+        header {
+            background-color: rgba(0,0,0,0) !important;
+            color: white !important;
+        }
+
+        /* 4. Asegurar que el botón del menú (hamburguesa) sea visible */
+        button[data-testid="sidebar-button"] {
+            background-color: rgba(255, 75, 75, 0.5) !important; /* Un fondo sutil rojo para que se vea */
+            border-radius: 50%;
+        }
+
+        /* 5. Ajuste de espacio superior */
+        .block-container {
+            padding-top: 2rem !important;
+        }
+
+        /* Tus estilos de botones previos */
         div.stButton > button {
             border-radius: 5px;
             height: 3em;
             transition: all 0.3s ease;
-        }
-        div.stButton > button:hover {
-            border-color: #ff4b4b;
-            color: #ff4b4b;
         }
     </style>
 """, unsafe_allow_html=True)
