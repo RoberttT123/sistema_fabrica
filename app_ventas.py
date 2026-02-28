@@ -20,35 +20,30 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* 1. Volvemos transparente la barra superior */
+        /* 1. Hacemos que la barra superior sea transparente */
         header[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important;
-            color: rgba(0,0,0,0) !important;
+            background-color: rgba(0, 0, 0, 0) !important;
+            border-bottom: none !important;
         }
 
-        /* 2. Ocultamos específicamente los botones de la derecha (Share, Estrella, etc) */
-        /* Esto los hace invisibles y no clickeables */
-        header[data-testid="stHeader"] [data-testid="stHeaderActionElements"] {
+        /* 2. Ocultamos los botones de la derecha (Share, Star, Edit, GitHub) */
+        /* Pero NO ocultamos el header completo para que el botón ">" siga ahí */
+        .stAppDeployButton, 
+        [data-testid="stHeaderActionElements"],
+        #MainMenu {
             display: none !important;
         }
 
-        /* 3. ASEGURAMOS que el botón del menú lateral (flecha o hamburguesa) sea visible */
-        /* Le damos el color de tu texto principal o un blanco para que resalte en el fondo oscuro */
-        header[data-testid="stHeader"] button {
-            color: #ffffff !important; 
-            visibility: visible !important;
+        /* 3. Aseguramos que el botón del menú (las flechitas >>) sea visible */
+        /* Si tu fondo es oscuro, lo ponemos blanco. Si es claro, ponlo black */
+        button[data-testid="stBaseButton-headerNoPadding"] {
+            color: white !important;
+            background-color: transparent !important;
         }
 
-        /* 4. Quitamos el botón de "Deploy" que a veces sale al lado del share */
-        .stAppDeployButton {
-            display: none !important;
-        }
-
-        /* Ajuste de botones en la barra lateral */
-        div.stButton > button {
-            border-radius: 5px;
-            height: 3em;
-            transition: all 0.3s ease;
+        /* 4. Quitamos el margen excesivo para que el catálogo suba */
+        .block-container {
+            padding-top: 2rem !important;
         }
     </style>
 """, unsafe_allow_html=True)
