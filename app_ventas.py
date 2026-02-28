@@ -18,38 +18,37 @@ st.set_page_config(
     page_icon="🧦"
 )
 
-# 2. CSS Optimizado - Oculta herramientas pero mantiene el Menú en Celulares
 st.markdown("""
     <style>
-        /* 1. Ocultar el botón de Deploy/Share y el footer */
-        .stAppDeployButton, footer {
+        /* 1. Hacemos la barra superior invisible pero funcional */
+        header[data-testid="stHeader"] {
+            background-color: rgba(0,0,0,0) !important; /* Totalmente transparente */
+            color: rgba(0,0,0,0) !important;
+        }
+
+        /* 2. Ocultamos específicamente los botones de la derecha (Share, Estrella, etc.) */
+        /* Buscamos el contenedor de los elementos de acción a la derecha */
+        [data-testid="stHeaderActionElements"] {
             display: none !important;
         }
 
-        /* 2. Ocultar solo los iconos de la derecha (estrella, lápiz, GitHub) */
-        /* Pero dejamos que el header exista para que el botón de menú sea visible */
-        header [data-testid="stHeaderActionElements"] {
+        /* 3. Aseguramos que el botón del menú (flecha/hamburguesa) SEA VISIBLE */
+        /* Forzamos el color blanco o el color de tu texto para que se vea en el celular */
+        header button {
+            color: white !important; 
+        }
+
+        /* 4. Ocultamos el menú de opciones (los 3 puntitos de Streamlit) */
+        #MainMenu {
             display: none !important;
         }
 
-        /* 3. Estilizar el header para que sea transparente y no estorbe */
-        header {
-            background-color: rgba(0,0,0,0) !important;
-            color: white !important;
-        }
-
-        /* 4. Asegurar que el botón del menú (hamburguesa) sea visible */
-        button[data-testid="sidebar-button"] {
-            background-color: rgba(255, 75, 75, 0.5) !important; /* Un fondo sutil rojo para que se vea */
-            border-radius: 50%;
-        }
-
-        /* 5. Ajuste de espacio superior */
+        /* 5. Ajuste para que el contenido no quede tan pegado arriba en PC */
         .block-container {
             padding-top: 2rem !important;
         }
-
-        /* Tus estilos de botones previos */
+        
+        /* Tus estilos de botones del sidebar se mantienen igual */
         div.stButton > button {
             border-radius: 5px;
             height: 3em;
