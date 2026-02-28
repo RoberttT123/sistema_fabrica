@@ -20,45 +20,37 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* 1. Barra superior totalmente transparente */
+        /* 1. Barra superior transparente y sin bordes */
         header[data-testid="stHeader"] {
             background-color: rgba(0, 0, 0, 0) !important;
             border-bottom: none !important;
         }
 
-        /* 2. Ocultar TODO el grupo de botones de la derecha (GitHub, Fork, Star, Share) */
-        [data-testid="stHeaderActionElements"] {
+        /* 2. OCULTAR TODO EL LADO DERECHO (Share, Star, Fork, GitHub, Lápiz) */
+        /* Eliminamos el contenedor de acciones y cualquier enlace en el header */
+        [data-testid="stHeaderActionElements"], 
+        .stAppDeployButton,
+        header[data-testid="stHeader"] a {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* 3. OCULTAR EL MENÚ DE LOS 3 PUNTOS */
+        #MainMenu {
             display: none !important;
         }
 
-        /* 3. Ocultar específicamente el botón de 'Deploy' y 'Fork' */
-        .stAppDeployButton {
-            display: none !important;
-        }
-
-        /* 4. Ocultar el menú de usuario (tu cuenta) y los 3 puntos de la derecha */
-        #MainMenu, 
-        [data-testid="stToolbar"], 
-        [data-testid="stDecoration"] {
-            display: none !important;
-        }
-
-        /* 5. MANTENER VISIBLE EL BOTÓN DE MENÚ (>>) */
-        /* Localizamos el botón que NO está en el grupo de acción de la derecha */
-        header[data-testid="stHeader"] button:not([aria-label="share"]):not([aria-label="favorite"]) {
+        /* 4. MANTENER EL BOTÓN DE MENÚ (>>) */
+        /* Localizamos el botón del lado izquierdo para que NO se oculte */
+        header[data-testid="stHeader"] button[data-testid="stBaseButton-headerNoPadding"] {
+            display: inline-flex !important;
+            visibility: visible !important;
             color: white !important;
-            opacity: 1 !important;
         }
 
-        /* 6. Eliminar cualquier borde o sombra que delate la barra */
-        [data-testid="stHeader"]::before {
-            background-image: none !important;
-            display: none !important;
-        }
-
-        /* 7. Pegar el contenido al tope de la pantalla */
+        /* 5. Subir el contenido para que no haya huecos */
         .block-container {
-            padding-top: 0rem !important;
+            padding-top: 1rem !important;
         }
     </style>
 """, unsafe_allow_html=True)
