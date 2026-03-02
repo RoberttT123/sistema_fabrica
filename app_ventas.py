@@ -20,37 +20,39 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* 1. Barra superior transparente y sin bordes */
+        /* 1. Ocultar la barra de herramientas derecha (Fork, Git, Estrella) */
+        /* Este selector apunta al contenedor interno que Streamlit Cloud protege */
+        [data-testid="stHeader"] div:has(> ul), 
+        [data-testid="stHeaderActionElements"],
+        .stAppDeployButton {
+            display: none !important;
+            width: 0px !important;
+            height: 0px !important;
+            overflow: hidden !important;
+        }
+
+        /* 2. Hacer el fondo de la barra totalmente invisible */
         header[data-testid="stHeader"] {
-            background-color: rgba(0, 0, 0, 0) !important;
-            border-bottom: none !important;
+            background-color: rgba(0,0,0,0) !important;
+            border: none !important;
         }
 
-        /* 2. OCULTAR TODO EL LADO DERECHO (Share, Star, Fork, GitHub, Lápiz) */
-        /* Eliminamos el contenedor de acciones y cualquier enlace en el header */
-        [data-testid="stHeaderActionElements"], 
-        .stAppDeployButton,
-        header[data-testid="stHeader"] a {
-            display: none !important;
-            visibility: hidden !important;
-        }
-
-        /* 3. OCULTAR EL MENÚ DE LOS 3 PUNTOS */
-        #MainMenu {
-            display: none !important;
-        }
-
-        /* 4. MANTENER EL BOTÓN DE MENÚ (>>) */
-        /* Localizamos el botón del lado izquierdo para que NO se oculte */
-        header[data-testid="stHeader"] button[data-testid="stBaseButton-headerNoPadding"] {
-            display: inline-flex !important;
+        /* 3. Asegurar que el botón del menú (Flechas >>) se mantenga */
+        /* Lo buscamos por su posición a la izquierda */
+        header[data-testid="stHeader"] button:first-child {
             visibility: visible !important;
+            display: flex !important;
             color: white !important;
         }
 
-        /* 5. Subir el contenido para que no haya huecos */
+        /* 4. Eliminar el menú de 3 puntos (Settings/About) */
+        #MainMenu {
+            display: none !important;
+        }
+        
+        /* 5. Pegar el contenido al tope de la pantalla */
         .block-container {
-            padding-top: 1rem !important;
+            padding-top: 0rem !important;
         }
     </style>
 """, unsafe_allow_html=True)

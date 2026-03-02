@@ -2,15 +2,21 @@ import streamlit as st
 import pandas as pd
 import time
 from modules.database import ejecutar_consulta, obtener_datos, registrar_log
-from datetime import datetime
+from datetime import datetime, timedelta
 from fpdf import FPDF
 import os
 import io
 import urllib.parse
+import locale
 
-# --- CONFIGURACIÓN ---
-TELEFONO_DESTINO = "59178790265"    
-
+# --- CONFIGURACIÓN DE IDIOMA PARA FECHAS (Español) ---
+try:
+    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+except:
+    # Si falla la configuración local, se usará inglés por defecto en algunas funciones,
+    # pero el código auxiliar abajo lo corrige.
+    pass
+TELEFONO_DESTINO = "59178790265"
 # --- CLASE PARA EL FORMATO DEL PDF ---
 class ProduccionPDF(FPDF):
     def header(self):
@@ -26,12 +32,22 @@ class ProduccionPDF(FPDF):
         self.cell(0, 10, f'Pagina {self.page_no()}', 0, 0, 'C')
 
 # --- FUNCIONES DE SOPORTE ---
-def generar_pdf_universal(fecha, df, titulo_reporte="REPORTE"):
+def obtener_dia_literal(fecha_str):
+    """Convierte fecha YYYY-MM-DD a YYYY-MM-DD - DIA"""
+    dias = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO"]
+    try:
+        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
+        dia_semana = dias[fecha_obj.weekday()]
+        return f"{fecha_str} - {dia_semana}"
+    except:
+        return fecha_str
+
+def generar_pdf_universal(fecha_titulo, df, titulo_reporte="REPORTE"):
     pdf = ProduccionPDF()
     pdf.add_page()
     pdf.set_fill_color(200, 220, 255)
     pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, f"{titulo_reporte} - {fecha}", 1, 1, 'C', True)
+    pdf.cell(0, 10, f"{titulo_reporte} - {fecha_titulo}", 1, 1, 'C', True)
     pdf.ln(5)
     
     pdf.set_fill_color(230, 230, 230)
@@ -47,6 +63,10 @@ def generar_pdf_universal(fecha, df, titulo_reporte="REPORTE"):
     for _, row in df.iterrows():
         for col in cols:
             texto = str(row[col])
+            # Especial para la columna fecha en reportes semanales/diarios
+            if col == 'Fecha':
+                texto = obtener_dia_literal(texto)
+                
             mostrar = (texto[:25] + '..') if len(texto) > 25 else texto
             pdf.cell(ancho_celda, 8, mostrar, 1, 0, 'C')
         pdf.ln()
@@ -56,9 +76,7 @@ def generar_pdf_universal(fecha, df, titulo_reporte="REPORTE"):
         pdf.set_font("Helvetica", 'B', 11)
         pdf.cell(0, 10, f"TOTAL: {df['DOCENAS'].sum():.1f} DOCENAS", 0, 1, 'R')
     
-    # --- CORRECCIÓN DEL ERROR ---
     resultado = pdf.output(dest='S')
-    # Si el resultado es string, lo codificamos. Si ya es bytes/bytearray, lo retornamos tal cual.
     if isinstance(resultado, str):
         return resultado.encode('latin-1', errors='replace')
     return bytes(resultado)
@@ -78,10 +96,22 @@ def enviar_whatsapp(mensaje):
 def render_medias_crudo():
     st.header("🧶 Producción y Mantenimiento de Planta")
     
-    tab_dia, tab_mes, tab_mant = st.tabs(["📅 Registro Diario", "📊 Reporte Mensual", "🛠️ Mantenimiento"])
-    items_list = ["Soporte Lycra", "Soporte Stretch", "Pantalon Lycra", "Panty Grande", "Panty Mediano", "Pantalon Stretch"]
+    tab_dia, tab_sem, tab_mes, tab_mant = st.tabs([
+        "📅 Registro Diario", 
+        "🗓️ Reporte Semanal",
+        "📊 Reporte Mensual", 
+        "🛠️ Mantenimiento"
+    ])
+    
+    items_list = [
+        "Soporte Lycra", "Soporte Lycra delgado", "Pantalón Lycra delgado",
+        "Panty grande", "Panty mediano (10-12)", "Panty pequeño (4-6)",
+        "Soporte stretch", "Pantalón stretch", "Tobillera stretch",
+        "Soporte lujo", "Pantalón lujo", "Tobillera lujo",
+        "Estrella", "Menudo", "Dolar", "Doble rombo", "Mariposa"
+    ]
 
-    # --- 1. PESTAÑA: REGISTRO Y DIARIO ---
+    # --- 1. PESTAÑA: REGISTRO DIARIO ---
     with tab_dia:
         st.subheader("📝 Nuevo Registro de Producción")
         with st.form("form_planchado", clear_on_submit=True):
@@ -128,13 +158,65 @@ def render_medias_crudo():
         else:
             st.info("No hay datos registrados para esta fecha.")
 
-    # --- 2. PESTAÑA: REPORTE MENSUAL ---
+    # --- 2. PESTAÑA: REPORTE SEMANAL ---
+    with tab_sem:
+        st.subheader("🗓️ Consolidado Semanal")
+        col_s1, col_s2 = st.columns(2)
+        with col_s1:
+            fecha_inicio = st.date_input("Fecha Inicio", datetime.now() - timedelta(days=7), key="sem_ini")
+        with col_s2:
+            fecha_fin = st.date_input("Fecha Fin", datetime.now(), key="sem_fin")
+
+        if fecha_inicio > fecha_fin:
+            st.error("Error: La fecha de inicio no puede ser mayor a la fecha fin.")
+        else:
+            query_sem = """
+                SELECT 
+                    fecha::date as "Fecha", 
+                    n_maquina as "MAQ", 
+                    item as "ITEM", 
+                    docenas as "DOCENAS" 
+                FROM produccion_crudo 
+                WHERE fecha::date >= %s AND fecha::date <= %s
+                ORDER BY fecha DESC, n_maquina ASC
+            """
+            df_sem = obtener_datos(query_sem, (fecha_inicio.strftime('%Y-%m-%d'), fecha_fin.strftime('%Y-%m-%d')))
+            
+            if not df_sem.empty:
+                # Mostrar tabla en pantalla
+                st.write(f"**Tabla de Producción del {fecha_inicio} al {fecha_fin}**")
+                
+                # Crear copia para mostrar en pantalla con el día literal
+                df_display = df_sem.copy()
+                df_display['Fecha'] = df_display['Fecha'].apply(lambda x: obtener_dia_literal(x.strftime('%Y-%m-%d')))
+                st.dataframe(df_display, use_container_width=True, hide_index=True)
+                
+                st.metric("TOTAL SEMANAL", f"{df_sem['DOCENAS'].sum():.1f} DOCENAS")
+                
+                c_s1, c_s2 = st.columns(2)
+                with c_s1:
+                    # El PDF ya maneja internamente el día literal gracias a la modificación en generar_pdf_universal
+                    pdf_s = generar_pdf_universal(f"{fecha_inicio} al {fecha_fin}", df_sem, "REPORTE SEMANAL")
+                    st.download_button("📄 PDF Semanal", data=pdf_s, file_name=f"Semanal_{fecha_inicio}.pdf", use_container_width=True)
+                with c_s2:
+                    exc_s = generar_excel_descargable({"Produccion_Semana": df_display})
+                    st.download_button("📗 Excel Semanal", data=exc_s, file_name=f"Semanal_{fecha_inicio}.xlsx", use_container_width=True)
+            else:
+                st.info("No hay datos en el rango de fechas seleccionado.")
+
+    # --- 3. PESTAÑA: REPORTE MENSUAL ---
     with tab_mes:
         st.subheader("📊 Consolidado Mensual")
         cm, ca = st.columns(2)
         with cm: m_sel = st.selectbox("Mes", range(1, 13), index=datetime.now().month - 1)
         with ca: a_sel = st.selectbox("Año", [2024, 2025, 2026], index=2)
 
+        query_detallado = """
+            SELECT fecha::date as "Fecha", n_maquina as "MAQ", item as "ITEM", docenas as "DOCENAS"
+            FROM produccion_crudo 
+            WHERE TO_CHAR(fecha, 'MM') = %s AND TO_CHAR(fecha, 'YYYY') = %s 
+            ORDER BY fecha DESC
+        """
         query_item = """
             SELECT item as "ITEM", SUM(docenas) as "DOCENAS" 
             FROM produccion_crudo 
@@ -148,29 +230,43 @@ def render_medias_crudo():
             GROUP BY n_maquina ORDER BY "DOCENAS" DESC
         """
         
+        df_m_detalle = obtener_datos(query_detallado, (f"{m_sel:02d}", str(a_sel)))
         df_m_item = obtener_datos(query_item, (f"{m_sel:02d}", str(a_sel)))
         df_m_maq = obtener_datos(query_maq, (f"{m_sel:02d}", str(a_sel)))
 
         if not df_m_item.empty:
+            st.write(f"**Tabla Detallada de Producción - Mes {m_sel}/{a_sel}**")
+            
+            # Formatear fecha para pantalla en mensual también
+            df_m_display = df_m_detalle.copy()
+            df_m_display['Fecha'] = df_m_display['Fecha'].apply(lambda x: obtener_dia_literal(x.strftime('%Y-%m-%d')))
+            st.dataframe(df_m_display, use_container_width=True, hide_index=True)
+            
             st.metric("TOTAL MENSUAL", f"{df_m_item['DOCENAS'].sum():.1f} DOCENAS")
             
             g1, g2 = st.columns(2)
             with g1: 
-                st.write("**Producción por Prenda**")
+                st.write("**Resumen por Prenda**")
                 st.bar_chart(df_m_item.set_index('ITEM'))
             with g2: 
-                st.write("**Producción por Máquina**")
+                st.write("**Resumen por Máquina**")
                 st.bar_chart(df_m_maq.set_index('MAQ'))
             
             c_m1, c_m2 = st.columns(2)
             with c_m1:
-                pdf_m = generar_pdf_universal(f"{m_sel}/{a_sel}", df_m_item, "CONSOLIDADO MENSUAL")
+                pdf_m = generar_pdf_universal(f"{m_sel}/{a_sel}", df_m_detalle, "CONSOLIDADO MENSUAL")
                 st.download_button("📄 PDF Mensual", data=pdf_m, file_name=f"Mensual_{m_sel}.pdf", use_container_width=True)
             with c_m2:
-                exc_m = generar_excel_descargable({"Resumen_Prendas": df_m_item, "Resumen_Maquinas": df_m_maq})
+                exc_m = generar_excel_descargable({
+                    "Resumen_Prendas": df_m_item, 
+                    "Resumen_Maquinas": df_m_maq,
+                    "Detalle_Diario": df_m_display
+                })
                 st.download_button("📗 Excel Mensual", data=exc_m, file_name=f"Mensual_{m_sel}.xlsx", use_container_width=True)
+        else:
+            st.info("No hay datos para el mes seleccionado.")
 
-    # --- 3. PESTAÑA: MANTENIMIENTO ---
+    # --- 4. PESTAÑA: MANTENIMIENTO ---
     with tab_mant:
         st.subheader("🛠️ Registro de Mantenimiento")
         with st.form("form_mant", clear_on_submit=True):
@@ -197,7 +293,7 @@ def render_medias_crudo():
         with cf1: mh = st.selectbox("Filtrar Mes", range(1, 13), index=datetime.now().month - 1, key="fmh")
         with cf2: ah = st.selectbox("Filtrar Año", [2024, 2025, 2026], index=2, key="fah")
         with cf3:
-            maq_res = obtener_datos("SELECT DISTINCT n_maquina FROM mantenimiento")
+            maq_res = obtener_datos("SELECT DISTINCT n_maquina FROM mantenimiento ORDER BY n_maquina")
             opc_m = ["Todas"] + ([str(int(m)) for m in maq_res.iloc[:,0]] if not maq_res.empty else [])
             maq_f = st.selectbox("Filtrar Máquina:", opc_m, key="fmaq")
 
@@ -217,12 +313,14 @@ def render_medias_crudo():
         if not df_h.empty:
             st.dataframe(df_h, use_container_width=True, hide_index=True)
             
-            with st.expander("🗑️ Borrar registro de mantenimiento"):
-                id_borrar = st.number_input("ID del mantenimiento a eliminar", min_value=1, step=1)
-                if st.button("Confirmar Eliminación", type="primary"):
-                    ejecutar_consulta("DELETE FROM mantenimiento WHERE id = %s", (id_borrar,))
-                    registrar_log("DELETE", "mantenimiento", f"Eliminó registro de mantenimiento ID {id_borrar}")
-                    st.warning(f"Registro {id_borrar} eliminado."); time.sleep(1); st.rerun()
+            # --- 🛡️ MEJORA DE SEGURIDAD: SOLO JEFE PUEDE BORRAR ---
+            if st.session_state.rol == "Jefe":
+                with st.expander("🗑️ Borrar registro de mantenimiento"):
+                    id_borrar = st.number_input("ID del mantenimiento a eliminar", min_value=1, step=1)
+                    if st.button("Confirmar Eliminación", type="primary"):
+                        ejecutar_consulta("DELETE FROM mantenimiento WHERE id = %s", (id_borrar,))
+                        registrar_log("DELETE", "mantenimiento", f"Eliminó registro de mantenimiento ID {id_borrar}")
+                        st.warning(f"Registro {id_borrar} eliminado."); time.sleep(1); st.rerun()
 
             c_h1, c_h2 = st.columns(2)
             with c_h1:
@@ -231,3 +329,5 @@ def render_medias_crudo():
             with c_h2:
                 exc_h = generar_excel_descargable({"Historial_Mantenimiento": df_h})
                 st.download_button("📗 Excel Historial", data=exc_h, file_name=f"Mant_{maq_f}.xlsx", use_container_width=True)
+        else:
+            st.info("No hay registros de mantenimiento en el periodo seleccionado.")
