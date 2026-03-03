@@ -1,6 +1,6 @@
 # 🏭 Sistema de Gestión de Fábrica (Medias)
 
-Este es un sistema integral desarrollado en **Python** y **Streamlit** para la gestión de inventario, ventas y control de asistencia de personal en una fábrica de medias. El sistema está diseñado para funcionar en una red local (WiFi), permitiendo que los empleados registren su asistencia desde sus propios dispositivos.
+Este es un sistema integral desarrollado en **Python** y **Streamlit** para la gestión de inventario, ventas y control de asistencia de personal en una fábrica de medias. El sistema está diseñado para funcionar en un localHost o con la url que te ofrecee streamlit al momento de crear la app, permitiendo que los empleados registren su asistencia desde sus propios dispositivos.
 
 ## 🚀 Características Principales
 
