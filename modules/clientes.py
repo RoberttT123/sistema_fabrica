@@ -9,7 +9,7 @@ from fpdf import FPDF
 class ClientePDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
-            self.image("logo.png", 10, 8, 25)
+            self.image("logo.png", 10, 4, 22)
         
         self.set_font("Helvetica", 'B', 15)
         self.set_text_color(40, 40, 40)
@@ -33,12 +33,13 @@ def generar_pdf_mejorado(datos, historial):
     
     pdf.set_font("Helvetica", '', 11)
     def clean(text):
-        return str(text).replace('ñ', 'n').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
+        # Limpieza básica para evitar errores de codificación en FPDF latin-1
+        return str(text).replace('ñ', 'n').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('Ñ', 'N')
 
     pdf.cell(95, 8, clean(f"Nombre: {datos['Cliente']}"), 1)
     pdf.cell(95, 8, f"ID Cliente: {datos['ID']}", 1, 1)
     pdf.cell(95, 8, clean(f"Telefono: {datos['Telefono']}"), 1)
-    pdf.cell(95, 8, f"Edad: {datos['Edad']} anos", 1, 1)
+    pdf.cell(95, 8, clean(f"Ciudad: {datos['Ciudad']}"), 1, 1)
     pdf.cell(0, 8, clean(f"Direccion: {datos['Direccion']}"), 1, 1)
     pdf.ln(10)
     
@@ -93,12 +94,17 @@ def mostrar_modal_historial(cliente_info, df_h):
 def render_clientes():
     st.header("🛍️ Cartera de Clientes")
 
+    # --- OBTENER DEPARTAMENTOS PARA LOS SELECTORES ---
+    df_deptos = obtener_datos("SELECT * FROM departamentos ORDER BY nombre ASC")
+    depto_opciones = {row['nombre']: row['id_depto'] for _, row in df_deptos.iterrows()}
+
     # --- LISTA DE CLIENTES ---
     query = """
-        SELECT c.id_cliente as "ID", c.nombre as "Cliente", c.direccion as "Direccion", 
-               c.telefono as "Telefono", c.edad as "Edad",
+        SELECT c.id_cliente as "ID", c.nombre as "Cliente", d.nombre as "Ciudad",
+               c.direccion as "Direccion", c.telefono as "Telefono", c.edad as "Edad",
                (SELECT COUNT(*) FROM pedidos WHERE id_cliente = c.id_cliente) as "Ventas"
         FROM clientes c
+        JOIN departamentos d ON c.id_depto = d.id_depto
         ORDER BY c.nombre ASC
     """
     
@@ -118,6 +124,7 @@ def render_clientes():
                 idx = event["selection"]["rows"][0]
                 cliente_sel = df_clientes.iloc[idx]
                 
+                # Buscamos historial con el ID del cliente
                 query_h = """
                     SELECT p.fecha as "Fecha", i.nombre as "Producto", 
                            p.cantidad as "Cant", p.precio as "Total" 
@@ -146,17 +153,18 @@ def render_clientes():
         with st.form("nuevo_cli", clear_on_submit=True):
             nom = st.text_input("Nombre o Razón Social")
             tel = st.text_input("Teléfono")
+            depto_nom = st.selectbox("Departamento", options=list(depto_opciones.keys()))
             dir_cli = st.text_input("Dirección")
             ed = st.number_input("Edad", 0, 120, 30)
             
             if st.form_submit_button("✅ Guardar Cliente", use_container_width=True):
                 if nom.strip():
+                    id_d = depto_opciones[depto_nom]
                     ejecutar_consulta(
-                        "INSERT INTO clientes (nombre, edad, direccion, telefono) VALUES (%s,%s,%s,%s)", 
-                        (nom, ed, dir_cli, tel)
+                        "INSERT INTO clientes (nombre, edad, direccion, telefono, id_depto) VALUES (%s,%s,%s,%s,%s)", 
+                        (nom, ed, dir_cli, tel, id_d)
                     )
-                    # --- LOG DE AUDITORÍA ---
-                    registrar_log("INSERT", "clientes", f"Registró nuevo cliente: {nom}")
+                    registrar_log("INSERT", "clientes", f"Registró nuevo cliente: {nom} en {depto_nom}")
                     st.success(f"¡{nom} registrado!")
                     time.sleep(1); st.rerun()
 
@@ -172,18 +180,24 @@ def render_clientes():
                     etel = st.text_input("Teléfono", value=cli['telefono'])
                     edir = st.text_input("Dirección", value=cli['direccion'])
                     
+                    # Obtener nombre del departamento actual
+                    depto_actual_query = obtener_datos("SELECT nombre FROM departamentos WHERE id_depto = %s", (int(cli['id_depto']),))
+                    nombre_d_actual = depto_actual_query.iloc[0]['nombre'] if not depto_actual_query.empty else list(depto_opciones.keys())[0]
+                    
+                    enuevo_depto = st.selectbox("Departamento", options=list(depto_opciones.keys()), 
+                                               index=list(depto_opciones.keys()).index(nombre_d_actual))
+                    
                     b1, b2 = st.columns(2)
                     if b1.form_submit_button("💾 Actualizar"):
+                        id_d_nuevo = depto_opciones[enuevo_depto]
                         ejecutar_consulta(
-                            "UPDATE clientes SET nombre=%s, direccion=%s, telefono=%s WHERE id_cliente=%s",
-                            (enom, edir, etel, id_edit)
+                            "UPDATE clientes SET nombre=%s, direccion=%s, telefono=%s, id_depto=%s WHERE id_cliente=%s",
+                            (enom, edir, etel, id_d_nuevo, id_edit)
                         )
-                        # --- LOG DE AUDITORÍA ---
-                        registrar_log("UPDATE", "clientes", f"Editó datos del cliente ID {id_edit}: {enom}")
+                        registrar_log("UPDATE", "clientes", f"Editó datos del cliente ID {id_edit}")
                         st.success("Actualizado"); time.sleep(1); st.rerun()
                         
                     if b2.form_submit_button("🗑️ Eliminar", type="primary"):
                         ejecutar_consulta("DELETE FROM clientes WHERE id_cliente=%s", (id_edit,))
-                        # --- LOG DE AUDITORÍA ---
-                        registrar_log("DELETE", "clientes", f"ELIMINÓ al cliente ID {id_edit} ({enom})")
+                        registrar_log("DELETE", "clientes", f"ELIMINÓ al cliente ID {id_edit}")
                         st.warning("Eliminado"); time.sleep(1); st.rerun()
