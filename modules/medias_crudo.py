@@ -21,9 +21,9 @@ TELEFONO_DESTINO = "59178790265"
 class ProduccionPDF(FPDF):
     def header(self):
         if os.path.exists("logo.png"):
-            self.image("logo.png", 10, 8, 30)
+            self.image("logo.png", 10, 8, 23)
         self.set_font("Helvetica", 'B', 15)
-        self.cell(0, 10, 'SISTEMA DE CONTROL DE PRODUCCION Y MANTENIMIENTO', 0, 1, 'C')
+        self.cell(0, 10, 'PRODUCCION EN CRUDO', 0, 1, 'C')
         self.ln(10)
 
     def footer(self):
@@ -128,7 +128,7 @@ def render_medias_crudo():
                     (f_reg.strftime('%Y-%m-%d'), n_maq, item, part, doc)
                 )
                 registrar_log("PRODUCCION", "produccion_crudo", f"Registró Maq {n_maq}: {doc} Doc. de {item}")
-                st.success("✅ Registro guardado en Supabase"); time.sleep(1); st.rerun()
+                st.success("✅ Registro guardado"); time.sleep(1); st.rerun()
 
         st.divider()
         st.subheader("🔍 Consulta Diaria")
@@ -160,7 +160,7 @@ def render_medias_crudo():
 
     # --- 2. PESTAÑA: REPORTE SEMANAL ---
     with tab_sem:
-        st.subheader("🗓️ Consolidado Semanal")
+        st.subheader("🗓️ Producción Semanal")
         col_s1, col_s2 = st.columns(2)
         with col_s1:
             fecha_inicio = st.date_input("Fecha Inicio", datetime.now() - timedelta(days=7), key="sem_ini")
@@ -206,7 +206,7 @@ def render_medias_crudo():
 
     # --- 3. PESTAÑA: REPORTE MENSUAL ---
     with tab_mes:
-        st.subheader("📊 Consolidado Mensual")
+        st.subheader("📊 Producción Mensual")
         cm, ca = st.columns(2)
         with cm: m_sel = st.selectbox("Mes", range(1, 13), index=datetime.now().month - 1)
         with ca: a_sel = st.selectbox("Año", [2024, 2025, 2026], index=2)

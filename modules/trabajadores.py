@@ -30,7 +30,7 @@ def render_trabajadores():
                 salario = st.number_input("Salario Mensual (Bs)", min_value=0.0, step=10.0)
                 telefono = st.text_input("Teléfono de Contacto")
             
-            if st.form_submit_button("✅ Guardar Empleado en la Nube", use_container_width=True):
+            if st.form_submit_button("✅ Guardar Empleado", use_container_width=True):
                 if nombre and usuario and clave:
                     # Verificar si el usuario ya existe en Supabase
                     check = obtener_datos("SELECT id_usuario FROM usuarios WHERE usuario = %s", (usuario,))
